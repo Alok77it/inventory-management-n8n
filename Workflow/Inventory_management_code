@@ -1,0 +1,677 @@
+{
+  "name": "Inventory Management",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -940,
+        20
+      ],
+      "id": "ccc1be6e-ce6f-4642-a999-df52f2ae4bbe",
+      "name": "Telegram Trigger",
+      "webhookId": "8bb1e1b4-996d-4277-8cf8-572885af17d9",
+      "credentials": {
+        "telegramApi": {
+          "id": "G3TSdZRe2gTQojRd",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1UK98YaIaTZ_FxWa63rj9utVWG4C48eN7-h-lDe15GFo",
+          "mode": "list",
+          "cachedResultName": "Testing",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UK98YaIaTZ_FxWa63rj9utVWG4C48eN7-h-lDe15GFo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "test",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UK98YaIaTZ_FxWa63rj9utVWG4C48eN7-h-lDe15GFo/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -520,
+        20
+      ],
+      "id": "32d1d5ce-2ff2-4956-b199-d80d5eb59d32",
+      "name": "Google Sheets",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YribeSxvFFAaYfcK",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "6418622154",
+        "text": "={{ $json[\"alert\"] }}\n",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        420,
+        360
+      ],
+      "id": "1443906f-ef0a-43be-a715-41511de66537",
+      "name": "Telegram",
+      "webhookId": "4f429aed-2f6a-4ef3-b768-7ba253d63efe",
+      "credentials": {
+        "telegramApi": {
+          "id": "G3TSdZRe2gTQojRd",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst googleSheetsData = $(\"Google Sheets\").all();\n\nconst updatedItems = items.map((item) => {\n  const asset = googleSheetsData.find(\n    (data) => data?.json[\"Asset Name\"] === item?.json?.Asset_Name,\n  );\n  if (!asset) {\n    item.json.alert = `✅ Asset ${item?.json?.Asset_Name} have duplicate mac or serial number. Please check again.`;\n  }\n  return item;\n});\n\nreturn updatedItems;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        280
+      ],
+      "id": "def060e8-2dd8-4087-92f4-d7ce7b56a901",
+      "name": "Alert code",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "09fe803f-b2ea-4735-a6da-607d8e2d9f61",
+              "leftValue": "={{ $json[\"isValid\"] }}",
+              "rightValue": "=true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": false
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -100,
+        20
+      ],
+      "id": "37a3a91a-07c9-48f1-bcad-1e758587fc43",
+      "name": "Check Existing",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "jsCode": "  // Get Google Sheets data\nconst googleSheetData = $input.all().map((item) => item.json);\n\n// Get Telegram data\nconst telegramData = $(\"Parse Telegram Trigger Data\")\n  .all()\n  .map((item) => item.json);\n\n// Function to check for duplicates (MAC Address or Serial Number)\nfunction checkDuplicates(sheetData, telegramItem) {\n  const newSerial = telegramItem[\"Serial_Number\"];\n  const newMac = telegramItem[\"MAC_Address\"];\n  const newAssetName = telegramItem[\"Asset_Name\"];\n\n  // Check Serial Number\n  const existingSerialEntry = sheetData.find(item => \n    item[\"Serial Number\"] === newSerial\n  );\n  if (existingSerialEntry && existingSerialEntry[\"Asset Name\"] !== newAssetName) {\n    console.log(`Duplicate Serial Number ${newSerial} found with different Asset Name: ${existingSerialEntry[\"Asset Name\"]}`);\n    return false;\n  }\n\n  // Check MAC Address\n  const existingMacEntry = sheetData.find(item => \n    item[\"MAC Address\"] === newMac\n  );\n  if (existingMacEntry && existingMacEntry[\"Asset Name\"] !== newAssetName) {\n    console.log(`Duplicate MAC Address ${newMac} found with different Asset Name: ${existingMacEntry[\"Asset Name\"]}`);\n    return false;\n  }\n\n  // No duplicates found (or duplicates match the same Asset Name)\n  return true;\n}\n\n// Process each Telegram item\nconst result = telegramData.map((telegramItem) => {\n  // Check if Asset Name exists in Google Sheets\n  const found = googleSheetData.some(\n    (sheetItem) => sheetItem[\"Asset Name\"] === telegramItem.Asset_Name\n  );\n\n  // Check for duplicates (MAC Address or Serial Number)\n  const isValid = checkDuplicates(googleSheetData, telegramItem);\n\n  // Return combined result\n  return { \n    json: {\n      ...telegramItem, \n      found, \n      isValid \n    }\n  };\n});\n\n// Return the result in the expected format\nreturn result;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -300,
+        20
+      ],
+      "id": "9876fe1f-26bb-41a6-981d-25a6998bc51c",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "jsCode": "const message = $json[\"message\"]?.text || \"\";\n\nfunction extractInfo(msg) {\n  // Common fields (if not explicitly split into old/new)\n  const assetName = msg.match(/(?:Laptop|System|PC|Desktop|LT)\\s*[^\\s,:]*/i)?.[0] ?? \"\";\n  const serial = msg.match(/SN[:\\- ]?([A-Za-z0-9]+)/i)?.[1] ?? \"\";\n  const mac = msg.match(/MAC[:\\- ]?([A-Fa-f0-9:]+)/i)?.[1] ?? \"\";\n  const os = msg.match(/OS[:\\- ]?([A-Za-z0-9\\s.]+?)(?=\\s+Team|\\s+to|\\s+with|$)/i)?.[1]?.trim() ?? \"\";\n  const employee = msg.match(/Employee[:\\- ]?([^ID]+)/i)?.[1]?.trim() ?? \"\";\n  const empId = msg.match(/ID[:\\- ]?([0-9]+)/i)?.[1] ?? \"\";\n  const team = msg.match(/Team[:\\- ]?([A-Za-z0-9\\s]+)(?=\\s|$)/i)?.[1]?.trim() ?? \"\";\n\n  // Fields for replaced assets (old and new)\n  const oldAssetName = msg.match(/Old\\s+(?:Laptop|System|PC|Desktop|LT)\\s*[^\\s,]*/i)?.[0]?.replace(/^Old\\s+/i, \"\") ?? assetName;\n  const oldSerial = msg.match(/Old\\s+SN[:\\- ]?([A-Za-z0-9]+)/i)?.[1] ?? serial;\n  const oldMac = msg.match(/Old\\s+MAC[:\\- ]?([A-Fa-f0-9:]+)/i)?.[1] ?? mac;\n  const oldOs = msg.match(/Old\\s+OS[:\\- ]?([A-Za-z0-9\\s.]+?)(?=\\s+Team|\\s+to|\\s+with|$)/i)?.[1]?.trim() ?? os;\n\n  const newAssetName = msg.match(/New\\s+(?:Laptop|System|PC|Desktop|LT)\\s*[^\\s,]*/i)?.[0]?.replace(/^New\\s+/i, \"\") ?? assetName;\n  const newSerial = msg.match(/New\\s+SN[:\\- ]?([A-Za-z0-9]+)/i)?.[1] ?? serial;\n  const newMac = msg.match(/New\\s+MAC[:\\- ]?([A-Fa-f0-9:]+)/i)?.[1] ?? mac;\n  const newOs = msg.match(/New\\s+OS[:\\- ]?([A-Za-z0-9\\s.]+?)(?=\\s+Team|\\s+to|\\s+with|$)/i)?.[1]?.trim() ?? os;\n\n  // Fields for lost assets\n  const lastSeen = msg.match(/Last[_ ]?Seen[:\\- ]?([^,]+)/i)?.[1]?.trim() ?? \"\";\n  const reportDate = msg.match(/Report[_ ]?Date[:\\- ]?([^,]+)/i)?.[1]?.trim() ?? \"\";\n\n  // Fields for damaged assets\n  const damageDesc = msg.match(/Damage[:\\- ]?([^,]+)/i)?.[1]?.trim() ?? \"\";\n  const repairStatus = msg.match(/Repair[_ ]?Status[:\\- ]?([^,]+)/i)?.[1]?.trim() ?? \"\";\n  const damageDate = msg.match(/Damage[_ ]?Date[:\\- ]?([^,]+)/i)?.[1]?.trim() ?? \"\";\n\n  return { \n    assetName, serial, mac, os, employee, empId, team,\n    oldAssetName, oldSerial, oldMac, oldOs,\n    newAssetName, newSerial, newMac, newOs,\n    lastSeen, reportDate, damageDesc, repairStatus, damageDate \n  };\n}\n\nfunction buildOutput(msg) {\n  const lowerMsg = msg.toLowerCase();\n  const { \n    assetName, serial, mac, os, employee, empId, team,\n    oldAssetName, oldSerial, oldMac, oldOs,\n    newAssetName, newSerial, newMac, newOs,\n    lastSeen, reportDate, damageDesc, repairStatus, damageDate\n  } = extractInfo(msg);\n\n  const today = new Date().toISOString().split('T')[0];\n\n  if (lowerMsg.includes(\"received\")) {\n    return {\n      Asset_Name: assetName,\n      Serial_Number: serial,\n      MAC_Address: mac,\n      Employee_Name: \"\",\n      Employee_ID: \"\",\n      OS: os,\n      Remarks: \"InStock\",\n      Team: team,\n    };\n  } else if (lowerMsg.includes(\"issued\")) {\n    return {\n      Asset_Name: assetName,\n      Serial_Number: serial,\n      MAC_Address: mac,\n      Employee_Name: employee,\n      Employee_ID: empId,\n      OS: os,\n      Remarks: \"Issued\",\n      Team: team,\n    };\n  } else if (lowerMsg.includes(\"replaced\")) {\n    return [\n      {\n        Asset_Name: oldAssetName,\n        Serial_Number: oldSerial,\n        MAC_Address: oldMac,\n        Employee_Name: \"\",\n        Employee_ID: \"\",\n        OS: oldOs,\n        Remarks: \"Replaced (Old)\",\n        Team: team,\n      },\n      {\n        Asset_Name: newAssetName,\n        Serial_Number: newSerial,\n        MAC_Address: newMac,\n        Employee_Name: employee,\n        Employee_ID: empId,\n        OS: newOs,\n        Remarks: \"Replaced (New)\",\n        Team: team,\n      }\n    ];\n  } else if (lowerMsg.includes(\"lost\")) {\n    return {\n      Asset_Name: assetName,\n      Serial_Number: serial,\n      MAC_Address: mac,\n      Employee_Name: employee,\n      Employee_ID: empId,\n      OS: os,\n      Remarks: \"Lost\",\n      Team: team,\n      Last_Seen: lastSeen,\n      Report_Date: reportDate || today\n    };\n  } else if (lowerMsg.includes(\"damaged\")) {\n    return {\n      Asset_Name: assetName,\n      Serial_Number: serial,\n      MAC_Address: mac,\n      Employee_Name: employee,\n      Employee_ID: empId,\n      OS: os,\n      Remarks: \"Damaged\",\n      Team: team,\n      Damage_Description: damageDesc,\n      Repair_Status: repairStatus || \"Pending Assessment\",\n      Damage_Date: damageDate || today\n    };\n  } else {\n    return { error: \"Unknown action type.\" };\n  }\n}\n\nreturn Array.isArray(buildOutput(message))\n  ? buildOutput(message).map(row => ({ json: row }))\n  : [{ json: buildOutput(message) }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -740,
+        20
+      ],
+      "id": "41dd3169-7d1d-442d-8a83-820b65c6cf93",
+      "name": "Parse Telegram Trigger Data"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1UK98YaIaTZ_FxWa63rj9utVWG4C48eN7-h-lDe15GFo",
+          "mode": "list",
+          "cachedResultName": "Testing",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UK98YaIaTZ_FxWa63rj9utVWG4C48eN7-h-lDe15GFo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "test",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UK98YaIaTZ_FxWa63rj9utVWG4C48eN7-h-lDe15GFo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Asset Name": "={{ $node[\"Parse Telegram Trigger Data\"].json[\"Asset_Name\"] }}",
+            "Serial Number": "={{ $node[\"Parse Telegram Trigger Data\"].json[\"Serial_Number\"] }}",
+            "Employee Name": "={{ $node[\"Parse Telegram Trigger Data\"].json[\"Employee_Name\"] }}",
+            "OS": "={{ $node[\"Parse Telegram Trigger Data\"].json[\"OS\"] }}",
+            "Remarks": "={{ $node[\"Parse Telegram Trigger Data\"].json[\"Remarks\"] }}",
+            "MAC Address": "={{ $node[\"Parse Telegram Trigger Data\"].json[\"MAC_Address\"] }}",
+            "Employee ID": "={{ $node[\"Parse Telegram Trigger Data\"].json[\"Employee_ID\"] }}",
+            "Team": "={{ $node[\"Parse Telegram Trigger Data\"].json[\"Team\"] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Asset Name",
+              "displayName": "Asset Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Serial Number",
+              "displayName": "Serial Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "MAC Address",
+              "displayName": "MAC Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Employee Name",
+              "displayName": "Employee Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Employee ID",
+              "displayName": "Employee ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "OS",
+              "displayName": "OS",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Remarks",
+              "displayName": "Remarks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Team",
+              "displayName": "Team",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        300,
+        40
+      ],
+      "id": "d926b7ac-0022-4a75-85f8-cf749bef977b",
+      "name": "Google Sheets1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YribeSxvFFAaYfcK",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cafcac65-ebeb-4dcc-8490-8f51e7234072",
+              "leftValue": "={{ $json[\"found\"] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        140,
+        -160
+      ],
+      "id": "0ba8d70e-c90d-48b8-8e69-7dc25d7fdcf4",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1UK98YaIaTZ_FxWa63rj9utVWG4C48eN7-h-lDe15GFo",
+          "mode": "list",
+          "cachedResultName": "Testing",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UK98YaIaTZ_FxWa63rj9utVWG4C48eN7-h-lDe15GFo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "test",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UK98YaIaTZ_FxWa63rj9utVWG4C48eN7-h-lDe15GFo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Asset Name": "={{ $node[\"Parse Telegram Trigger Data\"].json[\"Asset_Name\"] }}",
+            "Serial Number": "={{ $node[\"Parse Telegram Trigger Data\"].json[\"Serial_Number\"] }}",
+            "Employee Name": "={{ $node[\"Parse Telegram Trigger Data\"].json[\"Employee_Name\"] }}",
+            "OS": "={{ $node[\"Parse Telegram Trigger Data\"].json[\"OS\"] }}",
+            "Remarks": "={{ $node[\"Parse Telegram Trigger Data\"].json[\"Remarks\"] }}",
+            "MAC Address": "={{ $node[\"Parse Telegram Trigger Data\"].json[\"MAC_Address\"] }}",
+            "Employee ID": "={{ $node[\"Parse Telegram Trigger Data\"].json[\"Employee_ID\"] }}",
+            "Team": "={{ $node[\"Parse Telegram Trigger Data\"].json[\"Team\"] }}"
+          },
+          "matchingColumns": [
+            "Asset Name"
+          ],
+          "schema": [
+            {
+              "id": "Asset Name",
+              "displayName": "Asset Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Serial Number",
+              "displayName": "Serial Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "MAC Address",
+              "displayName": "MAC Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Employee Name",
+              "displayName": "Employee Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Employee ID",
+              "displayName": "Employee ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "OS",
+              "displayName": "OS",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Remarks",
+              "displayName": "Remarks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Team",
+              "displayName": "Team",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        440,
+        -200
+      ],
+      "id": "7d808942-ae57-4164-9d54-0970152a49f7",
+      "name": "Google Sheets2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YribeSxvFFAaYfcK",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "6418622154",
+        "text": "={{ $json[\"alert\"] }}\n",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        860,
+        -200
+      ],
+      "id": "b3551236-2b05-4686-984b-30f7bf6bcb58",
+      "name": "Telegram1",
+      "webhookId": "4f429aed-2f6a-4ef3-b768-7ba253d63efe",
+      "credentials": {
+        "telegramApi": {
+          "id": "G3TSdZRe2gTQojRd",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst googleSheetsData = $(\"Google Sheets\").all();\n\nconst updatedItems = items.map((item) => {\n  const asset = googleSheetsData.find(\n    (data) => data?.json[\"Asset Name\"] === item?.json?.Asset_Name,\n  );\n  if (!asset) {\n    item.json.alert = `✅ Asset found and update in the Sheet.`;\n  }\n  return item;\n});\n\nreturn updatedItems;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        620,
+        -200
+      ],
+      "id": "02bf0b91-4137-4aa2-9ec9-4908773d2eeb",
+      "name": "Alert code1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "chatId": "6418622154",
+        "text": "={{ $json[\"alert\"] }}\n",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        840,
+        40
+      ],
+      "id": "4503bf4f-4213-4ca9-927f-c5fdfea0a0bd",
+      "name": "Telegram2",
+      "webhookId": "4f429aed-2f6a-4ef3-b768-7ba253d63efe",
+      "credentials": {
+        "telegramApi": {
+          "id": "G3TSdZRe2gTQojRd",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst googleSheetsData = $(\"Google Sheets\").all();\n\nconst updatedItems = items.map((item) => {\n  const asset = googleSheetsData.find(\n    (data) => data?.json[\"Asset Name\"] === item?.json?.Asset_Name,\n  );\n  if (!asset) {\n    item.json.alert = `✅ Asset not found but updated in the system.`;\n  }\n  return item;\n});\n\nreturn updatedItems;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        580,
+        40
+      ],
+      "id": "409efd5b-d90a-485f-92bc-ab98d8b2d7dd",
+      "name": "Alert code2",
+      "alwaysOutputData": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Telegram Trigger Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert code": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Existing": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alert code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Telegram Trigger Data": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Check Existing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram": {
+      "main": [
+        []
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Google Sheets1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert code1": {
+      "main": [
+        [
+          {
+            "node": "Telegram1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets2": {
+      "main": [
+        [
+          {
+            "node": "Alert code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert code2": {
+      "main": [
+        [
+          {
+            "node": "Telegram2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets1": {
+      "main": [
+        [
+          {
+            "node": "Alert code2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1dfa4657-fa57-485a-af37-4242bb8ae5e6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3fc41c781aa435ae2549f8943b91b843797ef1d721352a6570fbd1029920cbe0"
+  },
+  "id": "fG5n3d4vbvwPRMSn",
+  "tags": []
+}
