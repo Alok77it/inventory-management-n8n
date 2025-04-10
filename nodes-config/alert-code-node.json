@@ -1,1 +1,54 @@
+const items = $input.all();
+const googleSheetsData = $("Google Sheets").all();
+
+const updatedItems = items.map((item) => {
+  const asset = googleSheetsData.find(
+    (data) => data?.json["Asset Name"] === item?.json?.Asset_Name,
+  );
+  if (!asset) {
+    item.json.alert = `✅ Asset ${item?.json?.Asset_Name} have duplicate mac or serial number. Please check again.`;
+  }
+  return item;
+});
+
+return updatedItems;
+
+
+
+
+const items = $input.all();
+const googleSheetsData = $("Google Sheets").all();
+
+const updatedItems = items.map((item) => {
+  const asset = googleSheetsData.find(
+    (data) => data?.json["Asset Name"] === item?.json?.Asset_Name,
+  );
+  if (!asset) {
+    item.json.alert = `✅ Asset not found but updated in the system.`;
+  }
+  return item;
+});
+
+return updatedItems;
+
+
+
+
+
+
+
+const items = $input.all();
+const googleSheetsData = $("Google Sheets").all();
+
+const updatedItems = items.map((item) => {
+  const asset = googleSheetsData.find(
+    (data) => data?.json["Asset Name"] === item?.json?.Asset_Name,
+  );
+  if (!asset) {
+    item.json.alert = `✅ Asset found and update in the Sheet.`;
+  }
+  return item;
+});
+
+return updatedItems;
 
