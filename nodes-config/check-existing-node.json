@@ -1,1 +1,59 @@
 
+  // Get Google Sheets data
+  const googleSheetData = $input.all().map((item) => item.json);
+
+  // Get Telegram data
+  const telegramData = $("Parse Telegram Trigger Data")
+    .all()
+    .map((item) => item.json);
+  
+  // Function to check for duplicates (MAC Address or Serial Number)
+  function checkDuplicates(sheetData, telegramItem) {
+    const newSerial = telegramItem["Serial_Number"];
+    const newMac = telegramItem["MAC_Address"];
+    const newAssetName = telegramItem["Asset_Name"];
+  
+    // Check Serial Number
+    const existingSerialEntry = sheetData.find(item => 
+      item["Serial Number"] === newSerial
+    );
+    if (existingSerialEntry && existingSerialEntry["Asset Name"] !== newAssetName) {
+      console.log(`Duplicate Serial Number ${newSerial} found with different Asset Name: ${existingSerialEntry["Asset Name"]}`);
+      return false;
+    }
+  
+    // Check MAC Address
+    const existingMacEntry = sheetData.find(item => 
+      item["MAC Address"] === newMac
+    );
+    if (existingMacEntry && existingMacEntry["Asset Name"] !== newAssetName) {
+      console.log(`Duplicate MAC Address ${newMac} found with different Asset Name: ${existingMacEntry["Asset Name"]}`);
+      return false;
+    }
+  
+    // No duplicates found (or duplicates match the same Asset Name)
+    return true;
+  }
+  
+  // Process each Telegram item
+  const result = telegramData.map((telegramItem) => {
+    // Check if Asset Name exists in Google Sheets
+    const found = googleSheetData.some(
+      (sheetItem) => sheetItem["Asset Name"] === telegramItem.Asset_Name
+    );
+  
+    // Check for duplicates (MAC Address or Serial Number)
+    const isValid = checkDuplicates(googleSheetData, telegramItem);
+  
+    // Return combined result
+    return { 
+      json: {
+        ...telegramItem, 
+        found, 
+        isValid 
+      }
+    };
+  });
+  
+  // Return the result in the expected format
+  return result;
