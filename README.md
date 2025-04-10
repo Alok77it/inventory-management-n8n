@@ -52,9 +52,16 @@ D -->|Mismatch/Duplicate| G[Send Alert via Telegram]
 Your Telegram messages should follow this style:
 
 ```
-Issued Laptop HP123 SN:ABCD1234 MAC:AA:BB:CC:DD:EE:FF OS:Windows 11 to John Doe (EMP1001)
+Asset issued: LT145 SN:DTJF563 MAC:AA:CC:44:F0 Employee: John Doe ID:1122 OS:Ubuntu 22.04 Team:IT
 
-Received Desktop Dell45 SN:DCBA4321 MAC:FF:EE:DD:CC:BB:AA OS:Windows 10
+Asset received: LT145 SN:DTJF563 MAC:AA:CC:44:F0 Employee: John Doe ID:1122 OS:Ubuntu 22.04 Team:IT
+
+Replaced Old LT1234 Old SN-ABCD1234 Old MAC:00:11:22:33:44:55 Old OS:Windows 10 New LT5678 New SN:XYZ7890 New MAC:AA:BB:CC:DD:EE:FF New OS:Windows 11 Employee:John Doe ID:1234 Team:IT
+
+Asset lost: LT2301 SN:HGFR789 MAC:BB:DD:45:EE Employee: Sarah Wilson ID:3344 OS:Windows 11 Team:Finance
+
+Asset damaged: LT1234 SN:ABCD123 MAC:00:11:22:33:44:55 Employee: Mark Johnson ID:5566 OS:MacOS 12.0 Team:Marketing
+
 ```
 
 ---
