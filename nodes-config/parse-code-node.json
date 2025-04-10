@@ -1,1 +1,132 @@
 
+const message = $json["message"]?.text || "";
+
+function extractInfo(msg) {
+  // Common fields (if not explicitly split into old/new)
+  const assetName = msg.match(/(?:Laptop|System|PC|Desktop|LT)\s*[^\s,:]*/i)?.[0] ?? "";
+  const serial = msg.match(/SN[:\- ]?([A-Za-z0-9]+)/i)?.[1] ?? "";
+  const mac = msg.match(/MAC[:\- ]?([A-Fa-f0-9:]+)/i)?.[1] ?? "";
+  const os = msg.match(/OS[:\- ]?([A-Za-z0-9\s.]+?)(?=\s+Team|\s+to|\s+with|$)/i)?.[1]?.trim() ?? "";
+  const employee = msg.match(/Employee[:\- ]?([^ID]+)/i)?.[1]?.trim() ?? "";
+  const empId = msg.match(/ID[:\- ]?([0-9]+)/i)?.[1] ?? "";
+  const team = msg.match(/Team[:\- ]?([A-Za-z0-9\s]+)(?=\s|$)/i)?.[1]?.trim() ?? "";
+
+  // Fields for replaced assets (old and new)
+  const oldAssetName = msg.match(/Old\s+(?:Laptop|System|PC|Desktop|LT)\s*[^\s,]*/i)?.[0]?.replace(/^Old\s+/i, "") ?? assetName;
+  const oldSerial = msg.match(/Old\s+SN[:\- ]?([A-Za-z0-9]+)/i)?.[1] ?? serial;
+  const oldMac = msg.match(/Old\s+MAC[:\- ]?([A-Fa-f0-9:]+)/i)?.[1] ?? mac;
+  const oldOs = msg.match(/Old\s+OS[:\- ]?([A-Za-z0-9\s.]+?)(?=\s+Team|\s+to|\s+with|$)/i)?.[1]?.trim() ?? os;
+
+  const newAssetName = msg.match(/New\s+(?:Laptop|System|PC|Desktop|LT)\s*[^\s,]*/i)?.[0]?.replace(/^New\s+/i, "") ?? assetName;
+  const newSerial = msg.match(/New\s+SN[:\- ]?([A-Za-z0-9]+)/i)?.[1] ?? serial;
+  const newMac = msg.match(/New\s+MAC[:\- ]?([A-Fa-f0-9:]+)/i)?.[1] ?? mac;
+  const newOs = msg.match(/New\s+OS[:\- ]?([A-Za-z0-9\s.]+?)(?=\s+Team|\s+to|\s+with|$)/i)?.[1]?.trim() ?? os;
+
+  // Fields for lost assets
+  const lastSeen = msg.match(/Last[_ ]?Seen[:\- ]?([^,]+)/i)?.[1]?.trim() ?? "";
+  const reportDate = msg.match(/Report[_ ]?Date[:\- ]?([^,]+)/i)?.[1]?.trim() ?? "";
+
+  // Fields for damaged assets
+  const damageDesc = msg.match(/Damage[:\- ]?([^,]+)/i)?.[1]?.trim() ?? "";
+  const repairStatus = msg.match(/Repair[_ ]?Status[:\- ]?([^,]+)/i)?.[1]?.trim() ?? "";
+  const damageDate = msg.match(/Damage[_ ]?Date[:\- ]?([^,]+)/i)?.[1]?.trim() ?? "";
+
+  return { 
+    assetName, serial, mac, os, employee, empId, team,
+    oldAssetName, oldSerial, oldMac, oldOs,
+    newAssetName, newSerial, newMac, newOs,
+    lastSeen, reportDate, damageDesc, repairStatus, damageDate 
+  };
+}
+
+function buildOutput(msg) {
+  const lowerMsg = msg.toLowerCase();
+  const { 
+    assetName, serial, mac, os, employee, empId, team,
+    oldAssetName, oldSerial, oldMac, oldOs,
+    newAssetName, newSerial, newMac, newOs,
+    lastSeen, reportDate, damageDesc, repairStatus, damageDate
+  } = extractInfo(msg);
+
+  const today = new Date().toISOString().split('T')[0];
+
+  if (lowerMsg.includes("received")) {
+    return {
+      Asset_Name: assetName,
+      Serial_Number: serial,
+      MAC_Address: mac,
+      Employee_Name: "",
+      Employee_ID: "",
+      OS: os,
+      Remarks: "InStock",
+      Team: team,
+    };
+  } else if (lowerMsg.includes("issued")) {
+    return {
+      Asset_Name: assetName,
+      Serial_Number: serial,
+      MAC_Address: mac,
+      Employee_Name: employee,
+      Employee_ID: empId,
+      OS: os,
+      Remarks: "Issued",
+      Team: team,
+    };
+  } else if (lowerMsg.includes("replaced")) {
+    return [
+      {
+        Asset_Name: oldAssetName,
+        Serial_Number: oldSerial,
+        MAC_Address: oldMac,
+        Employee_Name: "",
+        Employee_ID: "",
+        OS: oldOs,
+        Remarks: "Replaced (Old)",
+        Team: team,
+      },
+      {
+        Asset_Name: newAssetName,
+        Serial_Number: newSerial,
+        MAC_Address: newMac,
+        Employee_Name: employee,
+        Employee_ID: empId,
+        OS: newOs,
+        Remarks: "Replaced (New)",
+        Team: team,
+      }
+    ];
+  } else if (lowerMsg.includes("lost")) {
+    return {
+      Asset_Name: assetName,
+      Serial_Number: serial,
+      MAC_Address: mac,
+      Employee_Name: employee,
+      Employee_ID: empId,
+      OS: os,
+      Remarks: "Lost",
+      Team: team,
+      Last_Seen: lastSeen,
+      Report_Date: reportDate || today
+    };
+  } else if (lowerMsg.includes("damaged")) {
+    return {
+      Asset_Name: assetName,
+      Serial_Number: serial,
+      MAC_Address: mac,
+      Employee_Name: employee,
+      Employee_ID: empId,
+      OS: os,
+      Remarks: "Damaged",
+      Team: team,
+      Damage_Description: damageDesc,
+      Repair_Status: repairStatus || "Pending Assessment",
+      Damage_Date: damageDate || today
+    };
+  } else {
+    return { error: "Unknown action type." };
+  }
+}
+
+return Array.isArray(buildOutput(message))
+  ? buildOutput(message).map(row => ({ json: row }))
+  : [{ json: buildOutput(message) }];
